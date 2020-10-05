@@ -220,14 +220,13 @@ def built_in_comp():
 				_ = scipy.fft.fft(np.arange(size_range[i]))
 			bi_fft_time[i] = (time.time() - start_time) / 10000
 
-
-	new_x = np.arange(100, 10e6, 100)
-	dft_fit = np.polyfit(size_range_dft[-(dft_N-4):] * size_range_dft[-(dft_N-4):], dft_time[-(dft_N-4):], 1)
-	new_dft = dft_fit[0] * new_x * new_x
-	fft_fit = np.polyfit(size_range_fft[-(fft_N-4):] * np.log2(size_range_fft[-(fft_N-4):]), fft_time[-(fft_N-4):], 1)
-	new_fft = fft_fit[0] * new_x * np.log2(new_x)
-	bi_fft_fit = np.polyfit(size_range[-(fft_N-4):] * np.log2(size_range[-(fft_N-4):]), bi_fft_time[-(fft_N-4):], 1)
-	new_bi_fft = bi_fft_fit[0] * new_x * np.log2(new_x)
+	new_x = np.arange(10e1, 10e8, 5e2)
+	dft_fit = np.polyfit(size_range_dft[-(dft_N-6):] * size_range_dft[-(dft_N-6):], dft_time[-(dft_N-6):], 1)
+	new_dft = dft_fit[0] * new_x * new_x + dft_fit[1]
+	fft_fit = np.polyfit(size_range_fft[-(fft_N-6):] * np.log2(size_range_fft[-(fft_N-6):]), fft_time[-(fft_N-6):], 1)
+	new_fft = fft_fit[0] * new_x * np.log2(new_x) + fft_fit[1]
+	bi_fft_fit = np.polyfit(size_range[-(fft_N-6):] * np.log2(size_range[-(fft_N-6):]), bi_fft_time[-(fft_N-6):], 1)
+	new_bi_fft = bi_fft_fit[0] * new_x * np.log2(new_x) + bi_fft_fit[1]
 
 	fig = plt.figure(figsize=(8, 8))
 	axis1 = fig.add_subplot(111)
@@ -244,16 +243,29 @@ def built_in_comp():
 	axis1.axhline(1.0, color='k', ls='--')
 	idx_myDFT = np.argwhere(np.diff(np.sign(1 - new_dft))).flatten()
 	idx_myFFT = np.argwhere(np.diff(np.sign(1 - new_fft))).flatten()
-	print("The largest vector that I can transform within a second:\n\tWith DFT: {0}\n\tWith FFT: {1}".format(new_x[idx_myDFT][0], new_x[idx_myFFT[0]]))
+	idx_FFT = np.argwhere(np.diff(np.sign(1 - new_bi_fft))).flatten()
+	print("The largest vector that I can transform within a second:\n\tWith My DFT: {0}\n\tWith My FFT: {1}\n\tWith Scipy FFT: {2}".format(new_x[idx_myDFT][0], new_x[idx_myFFT][0], new_x[idx_FFT][0]))
 	axis1.plot(new_x[idx_myDFT], new_dft[idx_myDFT], 'kX', markersize=12.0)
 	axis1.plot(new_x[idx_myFFT], new_fft[idx_myFFT], 'kX', markersize=12.0)
+	axis1.plot(new_x[idx_FFT], new_bi_fft[idx_FFT], 'kX', markersize=12.0)
 
 	axis1.set_xscale("log")
-	axis1.set_yscale("log")
+	axis1.set_yscale("symlog")
 	axis1.legend()
 	# plt.show()
 	fig.savefig("Time Complexity.pdf", format="pdf")
 
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""
+If you want to check how the data files are generated,
+you could un-comment the two lines below, and run with
+the built_in_comp() function.
+
+The built_in_comp function is reponsible for taking in
+data from the existing data files and do the curve fitting
+and plot the comparison between three Fourier Transform functions
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""
 
 # benchmark_plot_dft()
 # benchmark_plot_fft()
