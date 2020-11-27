@@ -1,7 +1,8 @@
 import numpy as np
+from Potential import effective_potential
 import matplotlib.pyplot as plt
-import Potential
-import scipy.special
+from matplotlib import animation
+
 
 def approx_init(rmin):
 	"""
@@ -49,58 +50,53 @@ def numerov(K, psi0, psi1, dx):
 	return psi
 
 
-def radial_schrodinger_equation(E, l):
+def radial_schrodinger_equation(rs, dr, E, l):
 	"""
 	Solving the radial schrodinger equation given certain E and ls(l-list)
-	:param Es: Energy
+	:param rs: A list of position is in unit of rho
+	:param dr: The step length
+	:param E: Energy
 	:param l: Dimensionless
 	:return:
 	"""
+	r_min = rs[0]
+	eff_potential = effective_potential(rs, l)
+	psi = numerov(6.12 * (E - eff_potential), approx_init(r_min), approx_init(r_min + dr), dr)
+	return psi
 
+
+def animation_plot(eps=5.9):
 	r_min = 0.5
-	r_max = 5
-	r_steps = 10000
+	r_max = 7.5
+	r_steps = 1000
 	rs, dr = np.linspace(r_min, r_max, r_steps, retstep=True)
 
-	# fig = plt.figure(figsize=(5, 5))  # plot the calculated values
-	# fig.add_subplot(1, 1, 1)
+	fig = plt.figure(figsize=(8, 8))
+	fig.suptitle(r"Radial Wave Function $\chi(R) / R$  Versus R @ different E")
+	axs = []
+	lines = []
+	my_texts = []
+	for i in range(1, 10):
+		ax = fig.add_subplot(3, 3, i)
+		ax.fill_between(rs, effective_potential(rs, i - 1), color="silver")
+		my_text = ax.text(0.22, 0.10, "", transform=ax.transAxes, bbox=dict(facecolor='green', alpha=0.5))
+		line, = ax.plot([], [], lw=2)
+		axs.append(ax)
+		lines.append(line)
+		my_texts.append(my_text)
 
-	eff_potential = Potential.effective_potential(rs, l)
-	psi = numerov(6.12 * (E - eff_potential), approx_init(r_min), approx_init(r_min + dr), dr)
-	r1, r2 = r_max - dr, r_max
-	u1, u2 = psi[-2], psi[-1]
-	K = r1 * u2 / (r2 * u1)
-	k = np.sqrt(6.12 * E)
-	j1, j2 = scipy.special.spherical_jn(l, k * r1), scipy.special.spherical_jn(l, k * r2)
-	n1, n2 = scipy.special.spherical_yn(l, k * r1), scipy.special.spherical_yn(l, k * r2)
-	delta_l = np.arctan(((K * j1 - j2) / (K * n1 - n2)).real)
+	for i in range(9):
+		axs[i].set_xlim(r_min, r_max)
+		axs[i].set_ylim(-6, 6)
 
-	return delta_l
+	def animate(i):
+		for j in range(9):
+			my_texts[j].set_text("l = {0},E = {1:5.2f}meV".format(j, 0.1 + 0.01 * i))
+			lines[j].set_data(rs, 1e3 * np.real(radial_schrodinger_equation(rs, dr, 0.1 + 0.01 * i, j)) / np.sum(np.absolute(radial_schrodinger_equation(rs, dr, 0.1 + 0.01 * i, j))))
+		return lines + my_texts
 
-
-def test():
-
-	Es = np.linspace(0.1, 3.5, 200)
-	delta_l = np.zeros_like(Es)
-	l = 4
-
-	for i in range(np.size(Es)):
-		k = np.sqrt(6.12 * Es[i])
-		delta_l[i] = 4.0 * np.pi * (2 * l + 1) * (np.sin(radial_schrodinger_equation(Es[i], l)))**2 / k / k
-
-	fig = plt.figure(figsize=(5, 5))  # plot the calculated values
-	fig.add_subplot(1, 1, 1)
-	plt.plot(Es, delta_l, label=r" l={0}".format(l))
-	# plt.title(r'Effective potential')
-	# plt.ylim(-6, 6)
-	# plt.xlabel(r"$r[\rho]$", fontsize=12)
-	# plt.ylabel(r"$V_{eff}(r)$[meV]", fontsize=12)
-	plt.legend()
-
-	plt.tight_layout()
-	fig.subplots_adjust(top=0.88)
+	my_animation = animation.FuncAnimation(fig, animate, frames=400, interval=2, blit=True, repeat=True)
 	plt.show()
-	# fig.savefig("EffectivePotential.pdf", format="pdf")
 
 
-test()
+animation_plot()
